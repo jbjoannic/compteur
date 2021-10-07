@@ -6,10 +6,11 @@ import sys
 import time
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
 
 ## Choix de la vidéo
 #cap=cv2.VideoCapture(0)  #EN GROS LA DEVICE CAM
-cap=cv2.VideoCapture("C:/Users/jean-/Pictures/LOL/rammus.mp4")
+cap=cv2.VideoCapture("C:/Users/jean-/Documents/Mines_2A/Protech/video.mp4")
 
 ## Déclaration des variables
 global p #nb de personne
@@ -20,11 +21,16 @@ global dminfixe #distance entre deux voisins (maximale)
 p=2
 mfps=100
 Etat=[[],[],[],[],[]] #Stockage des coordonnées des personnes sur la vidéo
-kernel_blur=5       #gérer le flou
+kernel_blur=15      #gérer le flou
 seuil=120            #sensibilité de détection
 surface=40000      #vue de dessus: 70000
 ret, originalegd=cap.read()   #LIT LES FRAMES, ret boolean et originalegd l'image
-originale= originalegd[540:1084,500:1400] #redimensionnement de la vidéo
+print(ret)
+plt.imshow(originalegd)
+plt.show()
+originale= originalegd#[50:250,200:400] #redimensionnement de la vidéo
+plt.imshow(originale)
+plt.show()
 dminfixe=300
 
 for i in range(0,5):
@@ -66,13 +72,42 @@ while True:
     
     ret, framegd=cap.read()
     tickmark=cv2.getTickCount()  #return le nb de tick depuis un moment precis (ex, le demarrage du kernel)
-    frame=framegd[540:1084,500:1400]  #meme redimensionnement
+    frame=framegd #[50:250,200:400]  #meme redimensionnement
     gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
+    # plt.imshow(gray)
+    # plt.title("gray")
+    # plt.show()
+    
+    
     gray=cv2.GaussianBlur(gray, (kernel_blur, kernel_blur), 0)
+    # plt.imshow(gray)
+    # plt.title("flou")
+    # plt.show()
+    
+    grays=cv2.threshold(gray, seuil, 255, cv2.THRESH_BINARY)[1]
+    # plt.imshow(grays)
+    # plt.title("seuil simple")
+    # plt.show()
+    
+    
     mask=cv2.absdiff(originale, gray)  #difference absolue
+    # plt.imshow(mask)
+    # plt.title("difference")
+    # plt.show()
+    
     mask=cv2.threshold(mask, seuil, 255, cv2.THRESH_BINARY)[1] #retourne un threshold
-    mask=cv2.erode(mask,kernel_dilate, iterations=50) #50 erosions pour enlever les bails
-    mask=cv2.dilate(mask, kernel_dilate, iterations=50) #dilatation
+    plt.imshow(mask)
+    plt.title("seuil diff")
+    plt.show()
+    
+    mask=cv2.erode(mask,kernel_dilate, iterations=10) #50 erosions pour enlever les bails
+    plt.imshow(mask)
+    plt.title("erodé")
+    plt.show()
+    mask=cv2.dilate(mask, kernel_dilate, iterations=10) #dilatation
+    plt.imshow(mask)
+    plt.title("erodé")
+    plt.show()
     contours, nada=cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)       #trouver contours, plusieurs fermés
     frame_contour=frame.copy()
         
