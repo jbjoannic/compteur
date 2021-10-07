@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 ## Choix de la vidéo
 #cap=cv2.VideoCapture(0)  #EN GROS LA DEVICE CAM
-cap=cv2.VideoCapture("C:/Users/jean-/Documents/Mines_2A/Protech/video.mp4")
+cap=cv2.VideoCapture("C:/Users/jean-/Documents/Mines_2A/Protech/video2.mp4")
 
 ## Déclaration des variables
 global p #nb de personne
@@ -22,8 +22,8 @@ p=2
 mfps=100
 Etat=[[],[],[],[],[]] #Stockage des coordonnées des personnes sur la vidéo
 kernel_blur=15      #gérer le flou
-seuil=120            #sensibilité de détection
-surface=40000      #vue de dessus: 70000
+seuil=50            #sensibilité de détection
+surface=70000      #vue de dessus: 70000
 ret, originalegd=cap.read()   #LIT LES FRAMES, ret boolean et originalegd l'image
 print(ret)
 plt.imshow(originalegd)
@@ -62,15 +62,31 @@ def sens(L): #retourne 1 si la personne descend et -1 sinon
         return -1
     else:
         return 1
+    
+def disk( radius ): # defines a circular structuring element with radius given by ’ radius ’
+    x = np.arange( -radius , radius+1, 1)
+    xx, yy = np.meshgrid(x, x)
+    d = np.sqrt (xx**2 + yy**2)
+    return (d<=radius).astype(np.uint8)
 
 ## Code Principal 
-
+fr=1
 originale=cv2.cvtColor(originale, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
 originale=cv2.GaussianBlur(originale, (kernel_blur, kernel_blur), 0)        #mettre le flou  
 kernel_dilate=np.ones((5, 5), np.uint8) #par défaut en float64, la le type en int8
+kernel_morph=disk(30)
+plt.imshow(kernel_morph)
+plt.title("SEmorph")
+plt.show()
+
 while True:
-    
+        
     ret, framegd=cap.read()
+    
+    # if fr == 30:
+    #     originale=cv2.cvtColor(framegd, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
+    #     originale=cv2.GaussianBlur(originale, (kernel_blur, kernel_blur), 0)
+        
     tickmark=cv2.getTickCount()  #return le nb de tick depuis un moment precis (ex, le demarrage du kernel)
     frame=framegd #[50:250,200:400]  #meme redimensionnement
     gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
@@ -96,21 +112,31 @@ while True:
     # plt.show()
     
     mask=cv2.threshold(mask, seuil, 255, cv2.THRESH_BINARY)[1] #retourne un threshold
-    plt.imshow(mask)
-    plt.title("seuil diff")
-    plt.show()
+    # plt.imshow(mask)
+    # plt.title("seuil diff {0}".format(fr))
+    # plt.show()
     
-    mask=cv2.erode(mask,kernel_dilate, iterations=10) #50 erosions pour enlever les bails
-    plt.imshow(mask)
-    plt.title("erodé")
-    plt.show()
-    mask=cv2.dilate(mask, kernel_dilate, iterations=10) #dilatation
-    plt.imshow(mask)
-    plt.title("erodé")
-    plt.show()
-    contours, nada=cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)       #trouver contours, plusieurs fermés
+    mask1=cv2.erode(mask,kernel_dilate, iterations=10) #50 erosions pour enlever les bails
+    # plt.imshow(mask)
+    # plt.title("erodé")
+    # plt.show()
+    mask1=cv2.dilate(mask1, kernel_dilate, iterations=10) #dilatation
+    # plt.imshow(mask)
+    # plt.title("erodé")
+    # plt.show()
+    
+    mask2=cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_morph)
+    # plt.imshow(mask2)
+    # plt.title("ouvert diff {0}".format(fr))
+    # plt.show()
+    mask2=cv2.morphologyEx(mask2, cv2.MORPH_CLOSE, kernel_morph)
+    # plt.imshow(mask2)
+    # plt.title("fermé diff {0}".format(fr))
+    # plt.show()
+    
+    contours, nada=cv2.findContours(mask2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)       #trouver contours, plusieurs fermés
     frame_contour=frame.copy()
-        
+    fr+=1
     for c in contours:
         cv2.drawContours(frame_contour, [c], 0, (0, 255, 0), 5)     #dessiner les contours
         if cv2.contourArea(c)<surface:      #afficher que les rectangles avec une surface supérieure à celle rentrée
@@ -120,49 +146,50 @@ while True:
         centre.append((int(x+w/2),int(y+h/2)))
         
     #print(Etat)
-    for i in range (0,5): #Mise à jour de Etat et détection de la fin d'un passage
-        if Etat[i][0]!=(-1,-1):
-            indmin=trouvemin(centre,Etat[i][-1])
-            if indmin==-1:
-                if len(Etat[i])>3:
-                    p=p+sens(Etat[i])   #le nb de personnes est fct du sens
-                    Etat[i]=[(-1,-1)]
-            else:
-                Etat[i].append(centre[indmin])
-                del centre[indmin]
+    # for i in range (0,5): #Mise à jour de Etat et détection de la fin d'un passage
+    #     if Etat[i][0]!=(-1,-1):
+    #         indmin=trouvemin(centre,Etat[i][-1])
+    #         if indmin==-1:
+    #             if len(Etat[i])>3:
+    #                 p=p+sens(Etat[i])   #le nb de personnes est fct du sens
+    #                 Etat[i]=[(-1,-1)]
+    #         else:
+    #             Etat[i].append(centre[indmin])
+    #             del centre[indmin]
                 
-    if len(centre)!=0: #Introduction d'un nouvel intrus
-        n=-1
-        for nouveau in centre:
-            n+=1
-            i=0
-            while Etat[i][0]!=(-1,-1):
-                i+=1
-            Etat[i][0]=nouveau
-            del centre[n]
+    # if len(centre)!=0: #Introduction d'un nouvel intrus
+    #     n=-1
+    #     for nouveau in centre:
+    #         n+=1
+    #         i=0
+    #         while Etat[i][0]!=(-1,-1):
+    #             i+=1
+    #         Etat[i][0]=nouveau
+    #         del centre[n]
             
-    for i in range(0,5): # Dessin de la trace
-        if Etat[i][0]!=(-1,-1):
-            n=len(Etat[i])
-            for j in range(0,n-1):
-                cv2.line(frame, Etat[i][j], Etat[i][j+1], (0, 255, 0), 10)
+    # for i in range(0,5): # Dessin de la trace
+    #     if Etat[i][0]!=(-1,-1):
+    #         n=len(Etat[i])
+    #         for j in range(0,n-1):
+    #             cv2.line(frame, Etat[i][j], Etat[i][j+1], (0, 255, 0), 10)
                 
     #originale=gray
-    fps=cv2.getTickFrequency()/(cv2.getTickCount()-tickmark)
-    if mfps>fps:
-        mfps=fps
+    # fps=cv2.getTickFrequency()/(cv2.getTickCount()-tickmark)
+    # if mfps>fps:
+    #     mfps=fps
         
     ##Affichage
     
-    cv2.putText(frame, "FPS: {:05.2f} [o|l]seuil: {:d}  [p|m]blur: {:d}  [i|k]surface: {:d} p= {:d}".format(mfps, seuil, kernel_blur, surface,p), (10, 30), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 255, 255), 2)
+    #cv2.putText(frame, "FPS: {:05.2f} [o|l]seuil: {:d}  [p|m]blur: {:d}  [i|k]surface: {:d} p= {:d}".format(mfps, seuil, kernel_blur, surface,p), (10, 30), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 255, 255), 2)
     cv2.imshow("frame", frame)
-    cv2.imshow("contour", frame_contour)
-    cv2.imshow("mask", mask)
+    cv2.imshow("seuildiff", mask)
+    #cv2.imshow("contour", frame_contour)
+    cv2.imshow("morphfermé", mask2)
     intrus=0
     
     ##Boutons de modification des paramètres
     
-    key=cv2.waitKey(30)&0xFF
+    key=cv2.waitKey(20)&0xFF
     if key==ord('q'):
         break
     if key==ord('p'):
