@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 ## Choix de l'image'
 originalegd=cv2.imread("C:/Users/jean-/Documents/Mines_2A/Protech/algoCompteur/video2_Momentorigin.jpg")
-framegd=cv2.imread("C:/Users/jean-/Documents/Mines_2A/Protech/algoCompteur/video2_Moment.jpg")
+framegd=cv2.imread("C:/Users/jean-/Documents/Mines_2A/Protech/algoCompteur/video2_Moment4.jpg")
 ## Déclaration des variables
 
 ## Initialisation des variables
@@ -68,7 +68,7 @@ fr=1
 originale=cv2.cvtColor(originale, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
 originale=cv2.GaussianBlur(originale, (kernel_blur, kernel_blur), 0)        #mettre le flou  
 kernel_dilate=np.ones((5, 5), np.uint8) #par défaut en float64, la le type en int8
-kernel_morphcl=disk(50)
+kernel_morphcl=disk(75)
 kernel_morphop=disk(15)
     
     
@@ -109,16 +109,21 @@ for c in contours:
 
 
 plt.imshow(frame)
+plt.title("frame")
 plt.show()
 
 plt.imshow(mask)
+plt.title("mask")
 plt.show()
 #cv2.imshow("contour", frame_contour)
 plt.imshow(mask1)
+plt.title("mask1")
 plt.show()
 plt.imshow(mask2)
+plt.title("mask2")
 plt.show()
 plt.imshow(mask3)
+plt.title("mask3")
 plt.show()
 
 
