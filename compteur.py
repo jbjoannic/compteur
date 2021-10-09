@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 ## Choix de la vidéo
 #cap=cv2.VideoCapture(0)  #EN GROS LA DEVICE CAM
-cap=cv2.VideoCapture("C:/Users/jean-/Documents/Mines_2A/Protech/video2.mp4")
+cap=cv2.VideoCapture("C:/Users/jean-/Documents/Mines_2A/Protech/algoCompteur/video2.mp4")
 
 ## Déclaration des variables
 global p #nb de personne
@@ -28,7 +28,7 @@ ret, originalegd=cap.read()   #LIT LES FRAMES, ret boolean et originalegd l'imag
 print(ret)
 plt.imshow(originalegd)
 plt.show()
-originale= originalegd#[50:250,200:400] #redimensionnement de la vidéo
+originale= originalegd[:,200:1000] #redimensionnement de la vidéo
 plt.imshow(originale)
 plt.show()
 dminfixe=300
@@ -91,7 +91,7 @@ while True:
         #     originale=cv2.GaussianBlur(originale, (kernel_blur, kernel_blur), 0)
             
         tickmark=cv2.getTickCount()  #return le nb de tick depuis un moment precis (ex, le demarrage du kernel)
-        frame=framegd #[50:250,200:400]  #meme redimensionnement
+        frame=framegd[:,200:1000] #[50:250,200:400]  #meme redimensionnement
         gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
         # plt.imshow(gray)
         # plt.title("gray")
