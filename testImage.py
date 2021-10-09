@@ -71,7 +71,6 @@ kernel_dilate=np.ones((5, 5), np.uint8) #par défaut en float64, la le type en i
 kernel_morphcl=disk(75)
 kernel_morphop=disk(15)
     
-    
 
 gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
 gray=cv2.GaussianBlur(gray, (kernel_blur, kernel_blur), 0)
