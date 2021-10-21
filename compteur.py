@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 ## Choix de la vidéo
 #cap=cv2.VideoCapture(0)  #EN GROS LA DEVICE CAM
-cap=cv2.VideoCapture("C:/Users/jean-/Documents/Mines_2A/Protech/algoCompteur/video2.mp4")
+cap=cv2.VideoCapture("C:/Users/jean-/Documents/Mines_2A/Protech/algoCompteur/video2.h264")
 
 ## Déclaration des variables
 global p #nb de personne
@@ -28,7 +28,7 @@ ret, originalegd=cap.read()   #LIT LES FRAMES, ret boolean et originalegd l'imag
 print(ret)
 plt.imshow(originalegd)
 plt.show()
-originale= originalegd[:,200:1000] #redimensionnement de la vidéo
+originale= originalegd#[:,200:1000] #redimensionnement de la vidéo
 plt.imshow(originale)
 plt.show()
 dminfixe=300
@@ -79,19 +79,22 @@ kernel_morphop=disk(15)
 #plt.imshow(kernel_morph)
 # plt.title("SEmorph")
 # plt.show()
-div_frame=2
+div_frame=1
 ind=0
 
 while True:
-    
+    print(ind)
     ret, framegd=cap.read()
     if ind%div_frame==0: 
-        # if fr == 30:
-        #     originale=cv2.cvtColor(framegd, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
-        #     originale=cv2.GaussianBlur(originale, (kernel_blur, kernel_blur), 0)
+        if ind%(2*60)==0:
+            originale=framegd#[:,200:1000]
+            originale=cv2.cvtColor(framegd, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
+            originale=cv2.GaussianBlur(originale, (kernel_blur, kernel_blur), 0)
+            plt.imshow(originale)
+            plt.show()
             
         tickmark=cv2.getTickCount()  #return le nb de tick depuis un moment precis (ex, le demarrage du kernel)
-        frame=framegd[:,200:1000] #[50:250,200:400]  #meme redimensionnement
+        frame=framegd#[:,200:1000] #[50:250,200:400]  #meme redimensionnement
         gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
         # plt.imshow(gray)
         # plt.title("gray")
@@ -108,7 +111,6 @@ while True:
         # plt.title("seuil simple")
         # plt.show()
         
-        
         mask=cv2.absdiff(originale, gray)  #difference absolue
         # plt.imshow(mask)
         # plt.title("difference")
@@ -119,33 +121,33 @@ while True:
         # plt.title("seuil diff {0}".format(fr))
         # plt.show()
         
-        mask1=cv2.erode(mask,kernel_dilate, iterations=30) #50 erosions pour enlever les bails
+        #mask1=cv2.erode(mask,kernel_dilate, iterations=30) #50 erosions pour enlever les bails
         # plt.imshow(mask)
         # plt.title("erodé")
         # plt.show()
-        mask1=cv2.dilate(mask1, kernel_dilate, iterations=30) #dilatation
+        #mask1=cv2.dilate(mask1, kernel_dilate, iterations=30) #dilatation
         # plt.imshow(mask)
         # plt.title("erodé")
         # plt.show()
         
-        mask2=cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_morphop)
+        #mask2=cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_morphop)
         # plt.imshow(mask2)
         # plt.title("ouvert diff {0}".format(fr))
         # plt.show()
-        mask2=cv2.morphologyEx(mask2, cv2.MORPH_CLOSE, kernel_morphcl)
+        #mask2=cv2.morphologyEx(mask2, cv2.MORPH_CLOSE, kernel_morphcl)
         # plt.imshow(mask2)
         # plt.title("fermé diff {0}".format(fr))
         # plt.show()
         
         
         
-        mask3=cv2.erode(mask,kernel_dilate, iterations=30)
-        mask3=cv2.dilate(mask3,kernel_dilate, iterations=30)
-        mask3=cv2.morphologyEx(mask3, cv2.MORPH_CLOSE, kernel_morphcl)
+        #mask3=cv2.erode(mask,kernel_dilate, iterations=30)
+        #mask3=cv2.dilate(mask3,kernel_dilate, iterations=30)
+        #mask3=cv2.morphologyEx(mask3, cv2.MORPH_CLOSE, kernel_morphcl)
         #mask3=cv2.morphologyEx(mask3, cv2.MORPH_OPEN, kernel_morphop)
         
         
-        contours, nada=cv2.findContours(mask3, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)       #trouver contours, plusieurs fermés
+        """contours, nada=cv2.findContours(mask3, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)       #trouver contours, plusieurs fermés
         frame_contour=frame.copy()
         fr+=1
         for c in contours:
@@ -154,7 +156,7 @@ while True:
                 continue
             x, y, w, h=cv2.boundingRect(c)  #trace les rectangles (le + grand ds le contour)
             cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 2)
-            centre.append((int(x+w/2),int(y+h/2)))
+            centre.append((int(x+w/2),int(y+h/2)))"""
             
         #print(Etat)
         # for i in range (0,5): #Mise à jour de Etat et détection de la fin d'un passage
@@ -195,7 +197,7 @@ while True:
         cv2.imshow("frame", frame)
         cv2.imshow("seuildiff", mask)
         #cv2.imshow("contour", frame_contour)
-        cv2.imshow("morphfermé", mask3)
+        #cv2.imshow("morphfermé", mask3)
         intrus=0
     ind+=1
     ##Boutons de modification des paramètres
