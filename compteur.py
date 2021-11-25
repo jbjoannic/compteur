@@ -7,22 +7,24 @@ import time
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+import paho.mqtt.client as mqtt
 
 ## Choix de la vidéo
 #cap=cv2.VideoCapture(0)  #EN GROS LA DEVICE CAM
-cap=cv2.VideoCapture("C:/Users/jean-/Documents/Mines_2A/Protech/algoCompteur/video2.h264")
+cap=cv2.VideoCapture("C:/Users/jean-/Documents/Mines_2A/Protech/algoCompteur/video2.mp4")
 
 ## Déclaration des variables
 global p #nb de personne
 global dminfixe #distance entre deux voisins (maximale)
 
 ## Initialisation des variables
-
-p=2
+# voir tranche de mur pour la luminosité ou capteur de luminosité
+p=0
 mfps=100
 Etat=[[],[],[],[],[]] #Stockage des coordonnées des personnes sur la vidéo
+EtatImmobileFrame=[0,0,0,0,0]
 kernel_blur=15      #gérer le flou
-seuil=50            #sensibilité de détection
+seuil=75          #sensibilité de détection
 surface=70000      #vue de dessus: 70000
 ret, originalegd=cap.read()   #LIT LES FRAMES, ret boolean et originalegd l'image
 print(ret)
@@ -32,12 +34,34 @@ originale= originalegd#[:,200:1000] #redimensionnement de la vidéo
 plt.imshow(originale)
 plt.show()
 dminfixe=300
+avg = None
+config = "config.txt"
+
+
+##Récupération des identifiants serveur mqtt et topic
+L = []
+with open(config, 'r') as fichier:
+    for line in fichier:
+        L.append(line.strip("\n").split("=")[1]) #Ca a l'air compliqué mais ça récupère juste le nom du serveur
+        L.append(line.strip("\n").split("=")[1]) #Idem avec le topic
+server = L[0]
+topic = L[1]
+
+#Définition du client publisher
+#client = mqtt.Client("Compteur de personne")
+#client.connect(server)
+
 
 for i in range(0,5):
     Etat[i].append((-1,-1))
 centre=[]
 
 ## Fonctions annexes
+def send_mqtt(client, topic, dx):
+    """Envoie la donnée dx au sujet topic du serveur mqtt""" 
+    #client.publish(topic, dx)
+    #print("Just published " + str(dx) + " to Topic " + topic)
+
 
 def trouvemin(C,n): #retourne l'indice du voisin s'il y en a un assez proche ou -1 sinon
     min=dminfixe
@@ -55,13 +79,17 @@ def sens(L): #retourne 1 si la personne descend et -1 sinon
     n=len(L)
     sdeb=0
     sfin=0
-    for i in range (1,int(n/2)):
-        sdeb+=L[i][1]
-        sfin+=L[n-i][1]
-    if sdeb>sfin:
+    #for i in range (1,int(n/2)):
+    #    sdeb+=L[i][1]
+    #    sfin+=L[n-i][1]
+    sdeb=L[0][1]
+    sfin=L[-1][1]
+    if sdeb>sfin and sdeb>400:
         return -1
-    else:
+    elif sdeb<sfin and sdeb<400:
         return 1
+    else:
+        return 0
     
 def disk( radius ): # defines a circular structuring element with radius given by ’ radius ’
     x = np.arange( -radius , radius+1, 1)
@@ -81,21 +109,45 @@ kernel_morphop=disk(15)
 # plt.show()
 div_frame=1
 ind=0
+moy=np.sum(originale)
 
 while True:
-    print(ind)
+    changement=False
     ret, framegd=cap.read()
     if ind%div_frame==0: 
-        if ind%(2*60)==0:
-            originale=framegd#[:,200:1000]
-            originale=cv2.cvtColor(framegd, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
-            originale=cv2.GaussianBlur(originale, (kernel_blur, kernel_blur), 0)
-            plt.imshow(originale)
-            plt.show()
+        # if ind==120:
+        #     originale=framegd#[:,200:1000]
+        #     originale=cv2.cvtColor(framegd, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
+        #     originale=cv2.GaussianBlur(originale, (kernel_blur, kernel_blur), 0)
+        #     plt.imshow(originale)
+        #     plt.show()
+        #     moy=np.sum(originale)
+        
+        # if ind%(2*60)==0:
+        #     originale=framegd#[:,200:1000]
+        #     originale=cv2.cvtColor(framegd, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
+        #     originale=cv2.GaussianBlur(originale, (kernel_blur, kernel_blur), 0)
+        #     plt.imshow(originale)
+        #     plt.show()
             
         tickmark=cv2.getTickCount()  #return le nb de tick depuis un moment precis (ex, le demarrage du kernel)
         frame=framegd#[:,200:1000] #[50:250,200:400]  #meme redimensionnement
-        gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
+        
+        moyav=moy
+        moy=np.sum(frame)
+        
+        diff=abs(moy-moyav)
+        
+        # if (diff>400000000): # or (Etat=[(-1,-1),(-1,-1),(-1,-1),(-1,-1),(-1,-1)])):
+        #     originale=framegd#[:,200:1000]
+        #     originale=cv2.cvtColor(framegd, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
+        #     originale=cv2.GaussianBlur(originale, (kernel_blur, kernel_blur), 0)
+        #     plt.imshow(originale)
+        #     plt.show()
+        #     moy=np.sum(originale)
+        
+        # print(moy)
+        gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         # plt.imshow(gray)
         # plt.title("gray")
         # plt.show()
@@ -147,7 +199,7 @@ while True:
         #mask3=cv2.morphologyEx(mask3, cv2.MORPH_OPEN, kernel_morphop)
         
         
-        """contours, nada=cv2.findContours(mask3, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)       #trouver contours, plusieurs fermés
+        contours, nada=cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)       #trouver contours, plusieurs fermés
         frame_contour=frame.copy()
         fr+=1
         for c in contours:
@@ -156,40 +208,45 @@ while True:
                 continue
             x, y, w, h=cv2.boundingRect(c)  #trace les rectangles (le + grand ds le contour)
             cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 2)
-            centre.append((int(x+w/2),int(y+h/2)))"""
-            
-        #print(Etat)
-        # for i in range (0,5): #Mise à jour de Etat et détection de la fin d'un passage
-        #     if Etat[i][0]!=(-1,-1):
-        #         indmin=trouvemin(centre,Etat[i][-1])
-        #         if indmin==-1:
-        #             if len(Etat[i])>3:
-        #                 p=p+sens(Etat[i])   #le nb de personnes est fct du sens
-        #                 Etat[i]=[(-1,-1)]
-        #         else:
-        #             Etat[i].append(centre[indmin])
-        #             del centre[indmin]
+            centre.append((int(x+w/2),int(y+h/2)))
+        for i in range (0,5): #Mise à jour de Etat et détection de la fin d'un passage
+            if Etat[i][0]!=(-1,-1):
+                indmin=trouvemin(centre,Etat[i][-1])
+                if indmin==-1:
+                    if len(Etat[i])>3:
+                        p=p+sens(Etat[i])   #le nb de personnes est fct du sens
+                        EtatImmobileFrame[i]=0
+                        Etat[i]=[(-1,-1)]
+                        changement=True
+                    EtatImmobileFrame[i]+=1
+                    if EtatImmobileFrame[i]==5:
+                        EtatImmobileFrame[i]=0
+                        Etat[i]=[(-1,-1)]
                     
-        # if len(centre)!=0: #Introduction d'un nouvel intrus
-        #     n=-1
-        #     for nouveau in centre:
-        #         n+=1
-        #         i=0
-        #         while Etat[i][0]!=(-1,-1):
-        #             i+=1
-        #         Etat[i][0]=nouveau
-        #         del centre[n]
+                else:
+                    Etat[i].append(centre[indmin])
+                    del centre[indmin]
+                    
+        if len(centre)!=0: #Introduction d'un nouvel intrus
+            n=-1
+            for nouveau in centre:
+                n+=1
+                i=0
+                while Etat[i][0]!=(-1,-1):
+                    i+=1
+                Etat[i][0]=nouveau
+                del centre[n]
                 
-        # for i in range(0,5): # Dessin de la trace
-        #     if Etat[i][0]!=(-1,-1):
-        #         n=len(Etat[i])
-        #         for j in range(0,n-1):
-        #             cv2.line(frame, Etat[i][j], Etat[i][j+1], (0, 255, 0), 10)
+        for i in range(0,5): # Dessin de la trace
+            if Etat[i][0]!=(-1,-1):
+                n=len(Etat[i])
+                for j in range(0,n-1):
+                    cv2.line(frame, Etat[i][j], Etat[i][j+1], (0, 255, 0), 10)
                     
         #originale=gray
-        # fps=cv2.getTickFrequency()/(cv2.getTickCount()-tickmark)
-        # if mfps>fps:
-        #     mfps=fps
+        fps=cv2.getTickFrequency()/(cv2.getTickCount()-tickmark)
+        if mfps>fps:
+            mfps=fps
             
         ##Affichage
         
@@ -217,7 +274,12 @@ while True:
         seuil=min(255, seuil+1)
     if key==ord('l'):
         seuil=max(1, seuil-1)
-
+    print(p)
+    #print(Etat)
+    if changement:
+        continue
+        #send_mqtt(client, topic, p)
+        
 cap.release()
 cv2.destroyAllWindows()
 

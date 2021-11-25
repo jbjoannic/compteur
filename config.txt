@@ -1,0 +1,2 @@
+server=mqtt.eclipseprojects.io
+topic=compteur_de_personne
