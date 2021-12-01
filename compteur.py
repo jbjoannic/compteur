@@ -11,7 +11,7 @@ import paho.mqtt.client as mqtt
 
 ## Choix de la vidéo
 #cap=cv2.VideoCapture(0)  #EN GROS LA DEVICE CAM
-cap=cv2.VideoCapture("C:/Users/jean-/Documents/Mines_2A/Protech/algoCompteur/video2.mp4")
+cap=cv2.VideoCapture("video2.h264")
 
 ## Déclaration des variables
 global p #nb de personne
@@ -36,6 +36,17 @@ plt.show()
 dminfixe=300
 avg = None
 config = "config.txt"
+print(np.shape(originale))
+print(originale)
+originale=originale[:,:,1]
+print(np.shape(originale))
+print(originale)
+width=int(originale.shape[1]*0.25)
+height=int(originale.shape[0]*0.25)
+dsize=(width,height)  
+resized=cv2.resize(originale, dsize)
+print(np.shape(resized))
+print(resized)
 
 
 ##Récupération des identifiants serveur mqtt et topic
