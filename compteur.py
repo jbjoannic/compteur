@@ -11,7 +11,7 @@ import paho.mqtt.client as mqtt
 
 ## Choix de la vidéo
 #cap=cv2.VideoCapture(0)  #EN GROS LA DEVICE CAM
-cap=cv2.VideoCapture("video2.h264")
+cap=cv2.VideoCapture("video2.mp4")
 
 ## Déclaration des variables
 global p #nb de personne
@@ -25,7 +25,7 @@ Etat=[[],[],[],[],[]] #Stockage des coordonnées des personnes sur la vidéo
 EtatImmobileFrame=[0,0,0,0,0]
 kernel_blur=15      #gérer le flou
 seuil=75          #sensibilité de détection
-surface=70000      #vue de dessus: 70000
+surface=70000/16      #vue de dessus: 70000
 ret, originalegd=cap.read()   #LIT LES FRAMES, ret boolean et originalegd l'image
 print(ret)
 plt.imshow(originalegd)
@@ -33,20 +33,21 @@ plt.show()
 originale= originalegd#[:,200:1000] #redimensionnement de la vidéo
 plt.imshow(originale)
 plt.show()
-dminfixe=300
+dminfixe=75
 avg = None
 config = "config.txt"
-print(np.shape(originale))
-print(originale)
+# print(np.shape(originale))
+# print(originale)
 originale=originale[:,:,1]
-print(np.shape(originale))
-print(originale)
+
+# print(np.shape(originale))
+# print(originale)
 width=int(originale.shape[1]*0.25)
 height=int(originale.shape[0]*0.25)
 dsize=(width,height)  
-resized=cv2.resize(originale, dsize)
-print(np.shape(resized))
-print(resized)
+originale=cv2.resize(originale, dsize)
+# print(np.shape(resized))
+# print(resized)
 
 
 ##Récupération des identifiants serveur mqtt et topic
@@ -110,7 +111,7 @@ def disk( radius ): # defines a circular structuring element with radius given b
 
 ## Code Principal 
 fr=1
-originale=cv2.cvtColor(originale, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
+#originale=cv2.cvtColor(originale, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
 originale=cv2.GaussianBlur(originale, (kernel_blur, kernel_blur), 0)        #mettre le flou  
 kernel_dilate=np.ones((5, 5), np.uint8) #par défaut en float64, la le type en int8
 kernel_morphcl=disk(50)
@@ -125,6 +126,7 @@ moy=np.sum(originale)
 while True:
     changement=False
     ret, framegd=cap.read()
+    print(Etat)
     if ind%div_frame==0: 
         # if ind==120:
         #     originale=framegd#[:,200:1000]
@@ -143,26 +145,17 @@ while True:
             
         tickmark=cv2.getTickCount()  #return le nb de tick depuis un moment precis (ex, le demarrage du kernel)
         frame=framegd#[:,200:1000] #[50:250,200:400]  #meme redimensionnement
+        frame=frame[:,:,1]
         
-        moyav=moy
-        moy=np.sum(frame)
+        width=int(frame.shape[1]*0.25)
+        height=int(frame.shape[0]*0.25)
+        dsize=(width,height)  
+        frame=cv2.resize(frame, dsize)
         
-        diff=abs(moy-moyav)
         
-        # if (diff>400000000): # or (Etat=[(-1,-1),(-1,-1),(-1,-1),(-1,-1),(-1,-1)])):
-        #     originale=framegd#[:,200:1000]
-        #     originale=cv2.cvtColor(framegd, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
-        #     originale=cv2.GaussianBlur(originale, (kernel_blur, kernel_blur), 0)
-        #     plt.imshow(originale)
-        #     plt.show()
-        #     moy=np.sum(originale)
         
-        # print(moy)
-        gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        # plt.imshow(gray)
-        # plt.title("gray")
-        # plt.show()
-        
+        #gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray=np.copy(frame)
         
         gray=cv2.GaussianBlur(gray, (kernel_blur, kernel_blur), 0)
         # plt.imshow(gray)
@@ -173,6 +166,9 @@ while True:
         # plt.imshow(grays)
         # plt.title("seuil simple")
         # plt.show()
+        
+        print(np.shape(originale))
+        print(np.shape(gray))
         
         mask=cv2.absdiff(originale, gray)  #difference absolue
         # plt.imshow(mask)
