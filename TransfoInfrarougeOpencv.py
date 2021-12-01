@@ -113,9 +113,11 @@ while True:
     fig.canvas.blit(ax.bbox) # blitting - for speeding up run
     fig.canvas.flush_events() # for real-time plot
     
-    binary=cv2.threshold(frame, seuil, 255, cv2.THRESH_BINARY)[1]
+    binary=cv2.threshold(frame, seuil, 255, cv2.THRESH_BINARY)[1].astype(int)
+    #cv2.convertTo(binary2,CV_32SC1)
+    print(binary)
     
-    #contours, nada=cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, nada=cv2.findContours(binary2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     #positions=np.where(binary>0)
     #frame_contour=frame.copy()
     fr+=1

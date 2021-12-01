@@ -10,8 +10,9 @@ import matplotlib.pyplot as plt
 import paho.mqtt.client as mqtt
 
 ## Choix de la vidéo
-#cap=cv2.VideoCapture(0)  #EN GROS LA DEVICE CAM
-cap=cv2.VideoCapture("video2.mp4")
+cap=cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)#EN GROS LA DEVICE CAM
+#cap=cv2.VideoCapture("video2.mp4")
 
 ## Déclaration des variables
 global p #nb de personne
@@ -24,7 +25,7 @@ mfps=100
 Etat=[[],[],[],[],[]] #Stockage des coordonnées des personnes sur la vidéo
 EtatImmobileFrame=[0,0,0,0,0]
 kernel_blur=15      #gérer le flou
-seuil=75          #sensibilité de détection
+seuil=25          #sensibilité de détection
 surface=70000/16      #vue de dessus: 70000
 ret, originalegd=cap.read()   #LIT LES FRAMES, ret boolean et originalegd l'image
 print(ret)
@@ -205,7 +206,7 @@ while True:
         #mask3=cv2.morphologyEx(mask3, cv2.MORPH_CLOSE, kernel_morphcl)
         #mask3=cv2.morphologyEx(mask3, cv2.MORPH_OPEN, kernel_morphop)
         
-        
+        print(mask)
         contours, nada=cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)       #trouver contours, plusieurs fermés
         frame_contour=frame.copy()
         fr+=1
