@@ -7,7 +7,7 @@
 #######################################################
 #
 import time,sys
-sys.path.append('../')
+sys.path.append('LibrairieInfra/')
 # load AMG8833 module
 import amg8833_i2c
 import numpy as np
@@ -115,20 +115,20 @@ while True:
     
     binary=cv2.threshold(frame, seuil, 255, cv2.THRESH_BINARY)[1]
     
-    contours, nada=cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    positions=np.where(binary>0)
-    frame_contour=frame.copy()
+    #contours, nada=cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    #positions=np.where(binary>0)
+    #frame_contour=frame.copy()
     fr+=1
     
-    for c in contours:
+    """for c in contours:
         cv2.drawContours(frame_contour, [c], 0, (0, 255, 0), 5)     #dessiner les contours
         if cv2.contourArea(c)<surface:      #afficher que les rectangles avec une surface supérieure à celle rentrée
             continue
         x, y, w, h=cv2.boundingRect(c)  #trace les rectangles (le + grand ds le contour)
         cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 2)
-        centre.append((int(x+w/2),int(y+h/2)))
+        centre.append((int(x+w/2),int(y+h/2)))"""
         
-    for i in range (0,5): #Mise à jour de Etat et détection de la fin d'un passage
+    """for i in range (0,5): #Mise à jour de Etat et détection de la fin d'un passage
         if Etat[i][0]!=(-1,-1):
             indmin=trouvemin(centre,Etat[i][-1])
             if indmin==-1:
@@ -139,9 +139,9 @@ while True:
                 
             else:
                 Etat[i].append(centre[indmin])
-                del centre[indmin]
+                del centre[indmin]"""
                 
-    if len(centre)!=0: #Introduction d'un nouvel intrus
+    """if len(centre)!=0: #Introduction d'un nouvel intrus
         n=-1
         for nouveau in centre:
             n+=1
@@ -149,17 +149,17 @@ while True:
             while Etat[i][0]!=(-1,-1):
                 i+=1
             Etat[i][0]=nouveau
-            del centre[n]
+            del centre[n]"""
     
-    for i in range(0,5): # Dessin de la trace
+    """for i in range(0,5): # Dessin de la trace
         if Etat[i][0]!=(-1,-1):
             n=len(Etat[i])
             for j in range(0,n-1):
-                cv2.line(frame, Etat[i][j], Etat[i][j+1], (0, 255, 0), 10)
+                cv2.line(frame, Etat[i][j], Etat[i][j+1], (0, 255, 0), 10)"""
     
     
     cv2.imshow("frame", frame)
-    cv2.imshow("seuildiff", binary)
+    #cv2.imshow("seuildiff", binary)
     print("Thermistor Temperature: {0:2.2f}".format(T_thermistor)) # print thermistor temp
     
     
