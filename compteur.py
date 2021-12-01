@@ -96,9 +96,9 @@ def sens(L): #retourne 1 si la personne descend et -1 sinon
     #    sfin+=L[n-i][1]
     sdeb=L[0][1]
     sfin=L[-1][1]
-    if sdeb>sfin and sdeb>400:
+    if sdeb>sfin and sdeb>100:
         return -1
-    elif sdeb<sfin and sdeb<400:
+    elif sdeb<sfin and sdeb<100:
         return 1
     else:
         return 0
