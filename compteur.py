@@ -3,23 +3,30 @@
 ## Importation des bibliothèques
 import os
 import sys
+import RPi.GPIO as GPIO
 import time
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import paho.mqtt.client as mqtt
+from datetime import datetime as dt
+import json
+from threading import Timer
 
+GPIO.setmode(GPIO.BOARD)
+resistorPin = 7
 ## Choix de la vidéo
 cap=cv2.VideoCapture(0)
 #cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)#EN GROS LA DEVICE CAM
-cap=cv2.VideoCapture("video2.h264")
+#cap=cv2.VideoCapture("video2.mp4")
 
 ## Déclaration des variables
 global p #nb de personne
 global dminfixe #distance entre deux voisins (maximale)
-
 ## Initialisation des variables
 # voir tranche de mur pour la luminosité ou capteur de luminosité
+previous=0
+current=0
 p=0
 mfps=100
 Etat=[[],[],[],[],[]] #Stockage des coordonnées des personnes sur la vidéo
@@ -61,7 +68,8 @@ server = L[0]
 topic = L[1]
 
 #Définition du client publisher
-#client = mqtt.Client("Compteur de personne")
+client = mqtt.Client("Compteur de personne")
+print(server)
 #client.connect(server)
 
 
@@ -70,10 +78,13 @@ for i in range(0,5):
 centre=[]
 
 ## Fonctions annexes
-def send_mqtt(client, topic, dx):
-    """Envoie la donnée dx au sujet topic du serveur mqtt""" 
-    #client.publish(topic, dx)
-    #print("Just published " + str(dx) + " to Topic " + topic)
+def send_mqtt(client, topic, dp):
+    """Envoie la donnée dx au sujet topic du serveur mqtt"""
+    now=dt.now()
+    timestamp=int(dt.timestamp(now))
+    dic = {"variation":dp,"timestamp":timestamp}
+    client.publish(topic, payload=json.dumps(dic),qos=2)
+    print("published",dp)
 
 
 def trouvemin(C,n): #retourne l'indice du voisin s'il y en a un assez proche ou -1 sinon
@@ -110,6 +121,11 @@ def disk( radius ): # defines a circular structuring element with radius given b
     d = np.sqrt (xx**2 + yy**2)
     return (d<=radius).astype(np.uint8)
 
+"""def chgt_backg(frame,originale):
+    print("chgt")
+    originale=np.copy(frame)"""
+
+
 ## Code Principal 
 fr=1
 #originale=cv2.cvtColor(originale, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
@@ -124,11 +140,38 @@ div_frame=1
 ind=0
 moy=np.sum(originale)
 
+client.loop_start()
 while True:
     changement=False
     ret, framegd=cap.read()
     
-    if ind%div_frame==0: 
+    if ind%div_frame==0:
+        
+        
+        GPIO.setup(resistorPin, GPIO.OUT)
+        GPIO.output(resistorPin, GPIO.LOW)
+        time.sleep(0.1)
+    
+        GPIO.setup(resistorPin, GPIO.IN)
+        currentTime = time.time()
+        diff = 0
+    
+        while(GPIO.input(resistorPin) == GPIO.LOW):
+        
+            diff = time.time() - currentTime
+        current=max(0,255-diff*255/0.0085)
+        
+    
+    
+    
+        delta=abs(current-previous)
+        previous=current
+    
+    
+        #print(delta)
+        
+        
+        
         # if ind==120:
         #     originale=framegd#[:,200:1000]
         #     originale=cv2.cvtColor(framegd, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
@@ -137,13 +180,6 @@ while True:
         #     plt.show()
         #     moy=np.sum(originale)
         
-        # if ind%(2*60)==0:
-        #     originale=framegd#[:,200:1000]
-        #     originale=cv2.cvtColor(framegd, cv2.COLOR_BGR2GRAY)       #noir et blanc, essayer COLOR_BGR2HSV
-        #     originale=cv2.GaussianBlur(originale, (kernel_blur, kernel_blur), 0)
-        #     plt.imshow(originale)
-        #     plt.show()
-            
         tickmark=cv2.getTickCount()  #return le nb de tick depuis un moment precis (ex, le demarrage du kernel)
         frame=framegd#[:,200:1000] #[50:250,200:400]  #meme redimensionnement
         frame=frame[:,:,1]
@@ -152,6 +188,15 @@ while True:
         height=int(frame.shape[0]*0.25)
         dsize=(width,height)  
         frame=cv2.resize(frame, dsize)
+        
+        if delta>10:
+            time.sleep(2)
+            originale=np.copy(frame)
+            #chgt_backg(frame,originale)
+            """plt.imshow(originale)
+            plt.show()"""
+            
+        
         
         
         
@@ -209,7 +254,7 @@ while True:
         contours, nada=cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)       #trouver contours, plusieurs fermés
         frame_contour=frame.copy()
         fr+=1
-        print(contours)
+        
         for c in contours:
             cv2.drawContours(frame_contour, [c], 0, (0, 255, 0), 5)     #dessiner les contours
             if cv2.contourArea(c)<surface:      #afficher que les rectangles avec une surface supérieure à celle rentrée
@@ -222,10 +267,12 @@ while True:
                 indmin=trouvemin(centre,Etat[i][-1])
                 if indmin==-1:
                     if len(Etat[i])>3:
-                        p=p+sens(Etat[i])   #le nb de personnes est fct du sens
+                        dp=sens(Etat[i])
+                        p=p+dp#le nb de personnes est fct du sens
+                        #if dp!=0:
+                            #send_mqtt(client, topic, dp)
                         EtatImmobileFrame[i]=0
                         Etat[i]=[(-1,-1)]
-                        changement=True
                     EtatImmobileFrame[i]+=1
                     if EtatImmobileFrame[i]==5:
                         EtatImmobileFrame[i]=0
@@ -253,7 +300,7 @@ while True:
                 for j in range(0,n-1):
                     cv2.line(frame, Etat[i][j], Etat[i][j+1], (0, 255, 0), 10)
                     
-        #originale=gray
+        
         fps=cv2.getTickFrequency()/(cv2.getTickCount()-tickmark)
         if mfps>fps:
             mfps=fps

@@ -1,2 +1,5 @@
-server=mqtt.eclipseprojects.io
-topic=compteur_de_personne
+server=10.3.141.1
+topic_1=EMSE58CF/J/1/06.01/Sonde001/Passage
+topic_2=EMSE58CF/J/1/06.01/Sonde002/Passage
+topic_3=EMSE58CF/J/1/06.01/Sonde003/Passage
+topic_4=EMSE58CF/J/1/06.01/Sonde004/Passage

@@ -13,6 +13,8 @@ import amg8833_i2c
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
+from datetime import datetime as dt
+import json
 #
 
 
@@ -23,6 +25,7 @@ Etat=[[],[],[],[],[]]
 dminfixe=2
 fr=0
 surface=1
+config = "config.txt"
 
 for i in range(0,5):
     Etat[i].append((-1,-1))
@@ -55,6 +58,29 @@ def sens(L): #retourne 1 si la personne descend et -1 sinon
         return 1
     else:
         return 0
+    
+
+L = []
+with open(config, 'r') as fichier:
+    for line in fichier:
+        L.append(line.strip("\n").split("=")[1]) #Ca a l'air compliqué mais ça récupère juste le nom du serveur
+        L.append(line.strip("\n").split("=")[1]) #Idem avec le topic
+server = L[0]
+topic = L[1]
+
+#Définition du client publisher
+client = mqtt.Client("Compteur de personne")
+client.connect(server)
+
+
+## Fonctions annexes
+def send_mqtt(client, topic, dp):
+    """Envoie la donnée dx au sujet topic du serveur mqtt"""
+    now=dt.now()
+    timestamp=int(dt.timestamp(now))
+    dic = {"variation":dp,"timestamp":timestamp}
+    client.publish(topic, payload=json.dumps(dic),qos=2)
+    print("published",dp)
 #####################################
 # Initialization of Sensor
 #####################################
@@ -98,6 +124,7 @@ fig.show() # show figure
 #####################################
 #
 pix_to_read = 64 # read all 64 pixels
+client.loop_start()
 while True:
     changement=False
     status,pixels = sensor.read_temp(pix_to_read) # read pixels with status
@@ -131,12 +158,18 @@ while True:
     for i in range (0,5): #Mise à jour de Etat et détection de la fin d'un passage
         if Etat[i][0]!=(-1,-1):
             indmin=trouvemin(centre,Etat[i][-1])
-            print(i, indmin)
             if indmin==-1:
                 if len(Etat[i])>3:
-                    p=p+sens(Etat[i])   #le nb de personnes est fct du sens
+                    dp=sens(Etat[i])
+                    p=p+dp#le nb de personnes est fct du sens
+                    if dp!=0:
+                        send_mqtt(client, topic, dp)
+                    EtatImmobileFrame[i]=0
                     Etat[i]=[(-1,-1)]
-                    changement=True
+                EtatImmobileFrame[i]+=1
+                if EtatImmobileFrame[i]==5:
+                    EtatImmobileFrame[i]=0
+                    Etat[i]=[(-1,-1)]
                 
             else:
                 Etat[i].append(centre[indmin])
@@ -181,6 +214,6 @@ while True:
         seuil=max(1, seuil-1)
     
     
-    print(Etat)# print thermistor temp
+    print(p)# print thermistor temp
     
     
